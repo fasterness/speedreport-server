@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bmizerany/pat"
+	"github.com/fasterness/cors"
 	"github.com/r3b/goku"
 	"github.com/r3b/usergrid-go-sdk"
 	"log"
@@ -187,7 +188,10 @@ func main() {
 	mux.Get("/status", http.HandlerFunc(StatusHandler))
 	mux.Options("/test", http.HandlerFunc(OptionsHandler))
 	mux.Options("/status", http.HandlerFunc(OptionsHandler))
-	http.Handle("/", mux)
+	handler := cors.New(mux)
+	handler.RemoveMethod("PUT")
+	handler.RemoveMethod("DELETE")
+	http.Handle("/", handler)
 
 	stat("Server is ready.")
 	if HOST == "" {
@@ -218,8 +222,6 @@ func SaveRequest(request QueueItem) {
 	err := client.Post("requests", nil, data, usergrid.JSONResponseHandler(&objmap))
 	if err != nil {
 		log.Printf("Error saving request: %v\n", err)
-		// } else {
-		// 	log.Printf("Saved request: %v\n", objmap)
 	}
 }
 func QueueReader(out chan<- *QueueItem) {
@@ -295,21 +297,13 @@ func Notifier(in <-chan *QueueItem, out chan<- *QueueItem) {
 	}
 }
 func OptionsHandler(writer http.ResponseWriter, request *http.Request) {
-	writer.Header().Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
-	writer.Header().Add("Access-Control-Allow-Headers", "Content-Type")
-	writer.Header().Add("Access-Control-Allow-Origin", "*")
-	writer.Header().Add("Content-Type", "application/json")
 	writer.Write([]byte(""))
 }
 func StatusHandler(writer http.ResponseWriter, request *http.Request) {
-	writer.Header().Add("Access-Control-Allow-Origin", "*")
-	writer.Header().Add("Content-Type", "application/json")
 	status, _ := statJSON()
 	writer.Write([]byte(status))
 }
 func TestHandler(writer http.ResponseWriter, request *http.Request) {
-	writer.Header().Add("Access-Control-Allow-Origin", "*")
-	writer.Header().Add("Content-Type", "application/json")
 	params := request.URL.Query()
 	testUrl := params.Get(":url")
 	if testUrl == "" {
